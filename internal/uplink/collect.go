@@ -97,7 +97,9 @@ func collectAndCallOnce(rxPacket gw.UplinkFrame, callback func(packet models.RXP
 			out.DR = dr
 		}
 
-		out.TXInfo = uplinkFrame.TxInfo
+		if len(out.RXInfoSet) == 0 || uplinkFrame.RxInfo.Rssi > out.RXInfoSet[len(out.RXInfoSet)].Rssi {
+			out.TXInfo = uplinkFrame.TxInfo
+		}
 		out.RXInfoSet = append(out.RXInfoSet, uplinkFrame.RxInfo)
 	}
 
