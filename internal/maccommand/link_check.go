@@ -6,6 +6,7 @@ import (
 
 	"github.com/brocaar/chirpstack-api/go/v3/common"
 	"github.com/brocaar/chirpstack-network-server/internal/config"
+	"github.com/brocaar/chirpstack-network-server/internal/helpers"
 	"github.com/brocaar/chirpstack-network-server/internal/models"
 	"github.com/brocaar/chirpstack-network-server/internal/storage"
 	"github.com/brocaar/lorawan"
@@ -31,7 +32,17 @@ func handleLinkCheckReq(ctx context.Context, ds *storage.DeviceSession, rxPacket
 		return nil, fmt.Errorf("sf %d not in sf to required snr table", modInfo.SpreadingFactor)
 	}
 
-	margin := rxPacket.RXInfoSet[0].LoraSnr - requiredSNR
+	var margin float64
+	gwcnt := make(map[string]bool)
+	for _, rxinfo := range rxPacket.RXInfoSet {
+		if rxinfo.LoraSnr > margin {
+			margin = rxinfo.LoraSnr
+		}
+		gwcnt[fmt.Sprintf("%X", helpers.GetGatewayID(rxinfo))]=true
+	}
+
+	margin = margin - requiredSNR
+
 	if margin < 0 {
 		margin = 0
 	}
@@ -43,7 +54,7 @@ func handleLinkCheckReq(ctx context.Context, ds *storage.DeviceSession, rxPacket
 				CID: lorawan.LinkCheckAns,
 				Payload: &lorawan.LinkCheckAnsPayload{
 					Margin: uint8(margin),
-					GwCnt:  uint8(len(rxPacket.RXInfoSet)),
+					GwCnt:  uint8(len(gwcnt)),
 				},
 			},
 		},
